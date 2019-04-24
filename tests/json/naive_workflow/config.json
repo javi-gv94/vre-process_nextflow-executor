@@ -1,0 +1,81 @@
+{
+    "input_files": [
+        {
+            "name": "genes",
+            "value": "genes_dummy",
+            "required": true,
+            "allow_multiple": false
+        },
+        {
+            "name": "metrics_ref_datasets",
+            "value": "metrics_ref_datasets_dummy",
+            "required": true,
+            "allow_multiple": false
+        },
+        {
+            "name": "assessment_datasets",
+            "value": "assessment_datasets_dummy",
+            "required": true,
+            "allow_multiple": false
+        },
+        {
+            "name": "public_ref",
+            "value": "public_ref_dummy",
+            "required": true,
+            "allow_multiple": false
+        }
+    ],
+    "arguments": [
+        {
+            "name": "project",
+            "value": "."
+        },
+        {
+            "name": "description",
+            "value": "This is a test execution"
+        },
+        {
+            "name": "participant_id",
+            "value": "Paco"
+        },
+        {
+            "name": "cancer_type",
+            "value": [
+                "ALL"
+            ]
+        }
+    ],
+    "output_files": [
+        {
+            "name": "metrics",
+            "required": true,
+            "allow_multiple": false,
+            "file": {
+                "file_type": "JSON",
+                "data_type": "hic_reads",
+                "compressed": "null",
+                "meta_data": {
+                    "description": "Metrics derivated from the given input data",
+                    "tool": "TCGA_CD",
+                    "visible": true
+                }
+            }
+        },
+        {
+            "name": "tar_view",
+            "required": true,
+            "allow_multiple": false,
+            "custom_visualizer": true,
+            "file": {
+                "file_type": "TAR",
+                "data_type": "tool_statistics",
+                "compressed": "gzip",
+                "meta_data": {
+                    "description": "Metrics visualizer",
+                    "tool": "TCGA_CD",
+                    "visible": false
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+REALPATH="$(realpath "$0")"
+BASEDIR="$(dirname "$REALPATH")"
+case "$BASEDIR" in
+	/*)
+		true
+		;;
+	*)
+		BASEDIR="${PWD}/$BASEDIR"
+		;;
+esac
+
+PROGNAME="$(basename "$0")"
+
+for prog in docker nextflow ; do
+	type -a "$prog" > /dev/null
+	
+	if [ $? -ne 0 ] ; then
+		echo "UNCONFIGURED: No $prog executable" 1>&2
+		exit 1
+	fi
+done
+
+for RELPYBASEDIR in .py3Env .py2Env ; do
+	PYBASEDIR="${BASEDIR}/${RELPYBASEDIR}"
+	# Is there a prepared Python environment??
+	if [ -d "$PYBASEDIR" ] ; then
+		source "${PYBASEDIR}/bin/activate"
+		exec python "${BASEDIR}"/"${PROGNAME}".py "$@"
+		# This point is never reached
+	fi
+done
+
+echo "UNCONFIGURED: Python environment" 1>&2
+exit 1

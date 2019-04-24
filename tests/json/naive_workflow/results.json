@@ -1,0 +1,31 @@
+{
+    "output_files": [
+        {
+            "name": "metrics",
+            "data_type": "metrics",
+            "file_type": "TXT",
+            "sources": [
+                "/home/vre/tests/data/myGenes.txt"
+            ],
+            "meta_data": {
+                "tool": "TCGA_CD"
+            },
+            "taxon_id": 0,
+            "file_path": "/home/vre/test/run000/metrics.json"
+        },
+        {
+            "name": "tar_view",
+            "data_type": "tool_statistics",
+            "file_type": "TAR",
+            "sources": [
+                "/home/vre/tests/data/myGenes.txt"
+            ],
+            "meta_data": {
+                "tool": "TCGA_CD",
+            },
+            "taxon_id": 0,
+            "compressed" : "gzip",
+            "file_path": "/home/vre/test/run000/results.tar.gz"
+        }
+    ]
+}
