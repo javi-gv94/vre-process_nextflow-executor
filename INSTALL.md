@@ -2,7 +2,7 @@
 
 ## Install Nextflow and its dependencies, used by the wrapper
 
-1. Docker must be installed and running in the machine, as it is a requisite for this code. If it is not, you only have to run next command
+1. Docker must be installed and running in the machine, as it is a requisite for this code. If it is not, you only have to run next command:
 
  ```bash
  # These are pre-requisites for docker, described at https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository
@@ -25,35 +25,25 @@
  sudo usermod -a -G docker $USER
  ```
 
-2. Java JVM 8 or later must be installed, as it is a pre-requisite for Nextflow. These are the commands to install OpenJDK in Ubuntu:
+2. Docker image with [Nextflow](https://www.nextflow.io/) is fetched on first wrapper invocation. The specific version is determined by the content of [VRE_NF_RUNNER.py.ini](VRE_NF_RUNNER.py.ini). Docker images needed by the workflows are fetched on demand
 
- ```bash
- sudo apt update
- sudo apt install default-jdk
- ```
+4. Install the wrapper dependencies
 
-3. [Nextflow](https://www.nextflow.io/) should be installed with next instructions, so the installed version is assured:
-
-```
-TODO
-```
-
-## Install the wrapper dependencies
-
-* Python 2
-
-```bash
-virtualenv -p /usr/bin/python2 .py2Env
-source .py2Env/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-* Python3
-
-```bash
-python3 -m venv .py3Env
-source .py3Env/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-```
+  * Python 2
+  
+    ```bash
+    virtualenv -p /usr/bin/python2 .py2Env
+    source .py2Env/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    ```
+  
+  * Python3
+  
+    ```bash
+    python3 -m venv .py3Env
+    source .py3Env/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    ```
 
