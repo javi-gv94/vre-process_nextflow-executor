@@ -62,6 +62,8 @@ class WF_RUNNER(Tool):
     
     DEFAULT_DOCKER_CMD='docker'
     DEFAULT_GIT_CMD='git'
+    
+    MASKED_KEYS = { 'execution', 'project', 'description', 'nextflow_repo_uri', 'nextflow_repo_tag' }
 
     def __init__(self, configuration=None):
         """
@@ -132,7 +134,7 @@ class WF_RUNNER(Tool):
 
         self.configuration.update(configuration)
 
-    def doMaterializeRepo(git_uri,git_tag):
+    def doMaterializeRepo(self, git_uri, git_tag):
         repo_hashed_id = hashlib.sha1(git_uri).hexdigest()
         repo_hashed_tag_id = hashlib.sha1(git_tag).hexdigest()
         
@@ -168,8 +170,8 @@ class WF_RUNNER(Tool):
         
         return repo_tag_destdir
 
-    @task(returns=bool, input_loc=FILE_IN, goldstandard_dir_loc=FILE_IN, assess_dir_loc=FILE_IN, public_ref_dir_loc=FILE_IN, results_loc=FILE_OUT, stats_loc=FILE_OUT, other_loc=FILE_OUT, configuration=FILE_IN, isModifier=False)
-    def validate_and_assess(self, input_loc, goldstandard_dir_loc, assess_dir_loc, public_ref_dir_loc, results_loc, stats_loc, other_loc, configuration):  # pylint: disable=no-self-use
+    @task(returns=bool, input_loc=FILE_IN, goldstandard_dir_loc=FILE_IN, assess_dir_loc=FILE_IN, public_ref_dir_loc=FILE_IN, results_loc=FILE_OUT, stats_loc=FILE_OUT, other_loc=FILE_OUT, isModifier=False)
+    def validate_and_assess(self, input_loc, goldstandard_dir_loc, assess_dir_loc, public_ref_dir_loc, results_loc, stats_loc, other_loc):  # pylint: disable=no-self-use
         # First, we need to materialize the workflow
         nextflow_repo_uri = self.configuration.get('nextflow_repo_uri')
         nextflow_repo_tag = self.configuration.get('nextflow_repo_tag')
@@ -194,8 +196,8 @@ class WF_RUNNER(Tool):
         # Value needed to compose the Nextflow docker call
         uid = str(os.getuid())
         
-        # TODO workdir
-        workdir = 'TODO'
+        # Should workdir be in a separate place?
+        workdir = self.configuration['project']
         
         # Directories required by Nextflow in a Docker
         homedir = os.path.expanduser("~")
@@ -239,10 +241,16 @@ class WF_RUNNER(Tool):
         ]
         
         # These are the parameters, including input and output files and directories
+        
+        # Parameters which are not input or output files are in the configuration
         variable_params = [
-            ('event_id',event_id),
-            ('participant_id',participant_id)
+        #    ('event_id',event_id),
+        #    ('participant_id',participant_id)
         ]
+        for conf_key in self.configuration.keys():
+            if conf_key not in self.MASKED_KEYS:
+                variable_params.append((conf_key,self.configuration[conf_key]))
+        
         
         variable_infile_params = [
             ('input',input_loc),
@@ -377,8 +385,7 @@ class WF_RUNNER(Tool):
             os.path.abspath(input_files['public_ref_dir']),
             results_path,
             stats_path,
-            other_path,
-            self.configuration
+            other_path
         )
         results = compss_wait_on(results)
 
