@@ -48,6 +48,8 @@ except ImportError:
 from basic_modules.tool import Tool
 from basic_modules.metadata import Metadata
 
+import tempfile
+
 # ------------------------------------------------------------------------------
 
 class WF_RUNNER(Tool):
@@ -87,27 +89,43 @@ class WF_RUNNER(Tool):
             self.docker_cmd,"images","--format","{{.ID}}\t{{.Tag}}",docker_tag
         ]
         
-        checkimage_stdout = io.StringIO()
-        checkimage_stderr = io.StringIO()
-        retval = subprocess.call(checkimage_params,stdout=checkimage_stdout,stderr=checkimage_stderr)
-        if retval == 0:
-            if len(checkimage_stdout.getvalue()) == 0:
-                # The image is not here yet
-                pullimage_params = [
-                    self.docker_cmd,"pull",docker_tag
-                ]
-                pullimage_stdout = io.StringIO()
-                pullimage_stderr = io.StringIO()
-                retval = subprocess.call(pullimage_params,stdout=pullimage_stdout,stderr=pullimage_stderr)
+        with tempfile.NamedTemporaryFile() as checkimage_stdout:
+            with tempfile.NamedTemporaryFile() as checkimage_stderr:
+                retval = subprocess.call(checkimage_params,stdout=checkimage_stdout,stderr=checkimage_stderr)
+
                 if retval != 0:
-                    # It failed!
-                    errstr = "ERROR: VRE Nextflow Runner failed while pulling Nextflow image. Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(docker_tag,pullimage_stdout.getvalue(),pullimage_stderr.getvalue())
+                    # Reading the output and error for the report
+                    with open(checkimage_stdout.name,"r") as c_stF:
+                        checkimage_stdout_v = c_stF.read()
+                    with open(checkimage_stderr.name,"r") as c_stF:
+                        checkimage_stderr_v = c_stF.read()
+                    
+                    errstr = "ERROR: VRE Nextflow Runner failed while checking Nextflow image. Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(docker_tag,checkimage_stdout_v,checkimage_stderr_v)
                     logger.fatal(errstr)
                     raise Exception(errstr)
-        else:
-            errstr = "ERROR: VRE Nextflow Runner failed while checking Nextflow image. Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(docker_tag,checkimage_stdout.getvalue(),checkimage_stderr.getvalue())
-            logger.fatal(errstr)
-            raise Exception(errstr)
+            
+            do_pull_image = os.path.getsize(checkimage_stdout.name) == 0
+                    
+        
+        if do_pull_image:
+            # The image is not here yet
+            pullimage_params = [
+                self.docker_cmd,"pull",docker_tag
+            ]
+            with tempfile.NamedTemporaryFile() as pullimage_stdout:
+                with tempfile.NamedTemporaryFile() as pullimage_stderr:
+                    retval = subprocess.call(pullimage_params,stdout=pullimage_stdout,stderr=pullimage_stderr)
+                    if retval != 0:
+                        # Reading the output and error for the report
+                        with open(pullimage_stdout.name,"r") as c_stF:
+                            pullimage_stdout_v = c_stF.read()
+                        with open(pullimage_stderr.name,"r") as c_stF:
+                            pullimage_stderr_v = c_stF.read()
+                        
+                        # It failed!
+                        errstr = "ERROR: VRE Nextflow Runner failed while pulling Nextflow image. Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(docker_tag,pullimage_stdout_v,pullimage_stderr_v)
+                        logger.fatal(errstr)
+                        raise Exception(errstr)
         
         if configuration is None:
             configuration = {}
@@ -134,12 +152,19 @@ class WF_RUNNER(Tool):
             gitclone_params = [
                 self.git_cmd,'clone','-b',git_tag,'--recurse-subdirs',git_uri,repo_tag_destdir
             ]
-            gitclone_stdout = io.StringIO()
-            gitclone_stderr = io.StringIO()
-            retval = subprocess.call(gitclone_params,stdout=gitclone_stdout,stderr=gitclone_stderr)
-            if retval != 0:
-                errstr = "ERROR: VRE Nextflow Runner could not pull '{0}' (tag '{1}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,gitclone_stdout.getvalue(),gitclone_stderr.getvalue())
-                raise Exception(errstr)
+            
+            with tempfile.NamedTemporaryFile() as gitclone_stdout:
+                with tempfile.NamedTemporaryFile() as gitclone_stderr:
+                    retval = subprocess.call(gitclone_params,stdout=gitclone_stdout,stderr=gitclone_stderr)
+                    if retval != 0:
+                        # Reading the output and error for the report
+                        with open(gitclone_stdout.name,"r") as c_stF:
+                            gitclone_stdout_v = c_stF.read()
+                        with open(gitclone_stderr.name,"r") as c_stF:
+                            gitclone_stderr_v = c_stF.read()
+                        
+                        errstr = "ERROR: VRE Nextflow Runner could not pull '{0}' (tag '{1}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,gitclone_stdout_v,gitclone_stderr_v)
+                        raise Exception(errstr)
         
         return repo_tag_destdir
 
@@ -183,6 +208,10 @@ class WF_RUNNER(Tool):
                 return False
         
         retval_stage = 'validation'
+        
+        tmp_statsdir = tempfile.mkdtemp()
+        tmp_outdir = tempfile.mkdtemp()
+        tmp_otherdir = tempfile.mkdtemp()
         
         # The fixed parameters
         validation_cmd_pre_vol = [
