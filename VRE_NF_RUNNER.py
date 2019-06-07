@@ -26,11 +26,11 @@ import argparse
 from basic_modules.workflow import Workflow
 from utils import logger
 
-from tool.VRE_NF_RUNNER import VRE_NF_RUNNER
+from tool.VRE_NF import WF_RUNNER
 
 # ------------------------------------------------------------------------------
 
-class process_VRE_NF_RUNNER(Workflow):
+class process_WF_RUNNER(Workflow):
     """
     Functions for demonstrating the pipeline set up.
     """
@@ -75,7 +75,7 @@ class process_VRE_NF_RUNNER(Workflow):
         """
 
         # Initialise the test tool
-        tt_handle = VRE_NF_RUNNER(self.configuration)
+        tt_handle = WF_RUNNER(self.configuration)
         tt_files, tt_meta = tt_handle.run(input_files, metadata, output_files)
 
         return (tt_files, tt_meta)
@@ -94,7 +94,7 @@ def main_json(config, in_metadata, out_metadata):
     logger.info("1. Instantiate and launch the App")
     from apps.jsonapp import JSONApp
     app = JSONApp()
-    result = app.launch(process_VRE_NF_RUNNER,
+    result = app.launch(process_WF_RUNNER,
                         config,
                         in_metadata,
                         out_metadata)

@@ -89,21 +89,21 @@
     ],
     "arguments": [
         {
-            "name": "species",
-            "description": "Target Species",
-            "help": "Species selection for this benchmarking event",
-            "type": "enum",
-            "enum_items": {
-                "description": [
-                    "Human"
-                ],
-                "name": [
-                    "HUMAN"
-                ]
-            },
+            "name": "nextflow_repo_uri",
+            "description": "Git repository where the workflow is available",
+            "help": "Evaluation workflow for this community",
+            "type": "uri",
             "required": true,
-            "default": "HUMAN"
-        }
+            "default": "https://github.com/nextflow-io/hello.git"
+        },
+        {
+            "name": "nextflow_repo_tag",
+            "description": "Tag/release/code from git repository tagging the concrete version of the workflow",
+            "help": "Label of the tag",
+            "type": "string",
+            "required": true,
+            "default": "master"
+        }        
     ],
   "output_files": [
     {

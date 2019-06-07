@@ -13,7 +13,7 @@ esac
 
 PROGNAME="$(basename "$0")"
 
-for prog in docker ; do
+for prog in docker git ; do
 	type -a "$prog" > /dev/null
 	
 	if [ $? -ne 0 ] ; then

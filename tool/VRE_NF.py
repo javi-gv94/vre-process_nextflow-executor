@@ -27,6 +27,8 @@ import tarfile
 import shutil
 import io
 
+import hashlib
+
 from utils import logger
 
 try:
@@ -48,12 +50,16 @@ from basic_modules.metadata import Metadata
 
 # ------------------------------------------------------------------------------
 
-class VRE_NF_RUNNER(Tool):
+class WF_RUNNER(Tool):
     """
     Tool for writing to a file
     """
     DEFAULT_NXF_IMAGE='nextflow/nextflow'
     DEFAULT_NXF_VERSION='19.04.1'
+    DEFAULT_WF_BASEDIR='WF-checkouts'
+    
+    DEFAULT_DOCKER_CMD='docker'
+    DEFAULT_GIT_CMD='git'
 
     def __init__(self, configuration=None):
         """
@@ -64,14 +70,21 @@ class VRE_NF_RUNNER(Tool):
 
         local_config = configparser.ConfigParser()
         local_config.read(sys.argv[0] + '.ini')
+        
         # Setup parameters
         self.nxf_image = local_config.get('nextflow','docker_image')  if local_config.has_option('nextflow','docker_image') else self.DEFAULT_NXF_IMAGE
         self.nxf_version = local_config.get('nextflow','version')  if local_config.has_option('nextflow','version') else self.DEFAULT_NXF_VERSION
         
+        self.wf_basedir = os.path.abspath(local_config.get('workflows','basedir')  if local_config.has_option('workflows','basedir') else self.DEFAULT_WF_BASEDIR)
+        
+        # Where the external commands should be located
+        self.docker_cmd = local_config.get('defaults','docker_cmd')  if local_config.has_option('defaults','docker_cmd') else self.DEFAULT_DOCKER_CMD
+        self.git_cmd = local_config.get('defaults','git_cmd')  if local_config.has_option('defaults','git_cmd') else self.DEFAULT_GIT_CMD
+        
         # Now, we have to assure the nextflow image is already here
         docker_tag = self.nxf_image+':'+self.nxf_version
         checkimage_params = [
-            "docker","images","--format","{{.ID}}\t{{.Tag}}",docker_tag
+            self.docker_cmd,"images","--format","{{.ID}}\t{{.Tag}}",docker_tag
         ]
         
         checkimage_stdout = io.StringIO()
@@ -81,7 +94,7 @@ class VRE_NF_RUNNER(Tool):
             if len(checkimage_stdout.getvalue()) == 0:
                 # The image is not here yet
                 pullimage_params = [
-                    "docker","pull",docker_tag
+                    self.docker_cmd,"pull",docker_tag
                 ]
                 pullimage_stdout = io.StringIO()
                 pullimage_stderr = io.StringIO()
@@ -101,13 +114,57 @@ class VRE_NF_RUNNER(Tool):
 
         self.configuration.update(configuration)
 
-    @task(returns=bool, genes_loc=FILE_IN, metrics_ref_dir_loc=FILE_IN, assess_dir_loc=FILE_IN, public_ref_dir_loc=FILE_IN, metrics_loc=FILE_OUT, tar_view_loc=FILE_OUT, isModifier=False)
-    def validate_and_assess(self, genes_loc, metrics_ref_dir_loc, assess_dir_loc, public_ref_dir_loc, metrics_loc, tar_view_loc):  # pylint: disable=no-self-use
-        participant_id = self.configuration['participant_id']
-        cancer_types = self.configuration['cancer_type']
+    def doMaterializeRepo(git_uri,git_tag):
+        repo_hashed_id = hashlib.sha1(git_uri).hexdigest()
+        repo_hashed_tag_id = hashlib.sha1(git_tag).hexdigest()
         
-        inputDir = os.path.dirname(genes_loc)
-        inputBasename = os.path.basename(genes_loc)
+        # Assure directory exists before next step
+        repo_destdir = os.path.join(self.wf_basedir,repo_hashed_id)
+        if not os.path.exists(repo_destdir):
+            try:
+                os.makedirs(repo_destdir)
+            except IOError as error:
+                errstr = "ERROR: Unable to create intermediate directories for repo {}. ".format(git_uri,);
+                raise Exception(errstr)
+        
+        repo_tag_destdir = os.path.join(repo_destdir,repo_hashed_tag_id)
+        # We are assuming that, if the directory does exist, it contains the repo
+        if not os.path.exists(repo_tag_destdir):
+            # Try checking out the repository
+            gitclone_params = [
+                self.git_cmd,'clone','-b',git_tag,'--recurse-subdirs',git_uri,repo_tag_destdir
+            ]
+            gitclone_stdout = io.StringIO()
+            gitclone_stderr = io.StringIO()
+            retval = subprocess.call(gitclone_params,stdout=gitclone_stdout,stderr=gitclone_stderr)
+            if retval != 0:
+                errstr = "ERROR: VRE Nextflow Runner could not pull '{0}' (tag '{1}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,gitclone_stdout.getvalue(),gitclone_stderr.getvalue())
+                raise Exception(errstr)
+        
+        return repo_tag_destdir
+
+    @task(returns=bool, input_loc=FILE_IN, goldstandard_dir_loc=FILE_IN, assess_dir_loc=FILE_IN, public_ref_dir_loc=FILE_IN, results_loc=FILE_OUT, stats_loc=FILE_OUT, other_loc=FILE_OUT, isModifier=False)
+    def validate_and_assess(self, input_loc, goldstandard_dir_loc, assess_dir_loc, public_ref_dir_loc, results_loc, stats_loc, other_loc):  # pylint: disable=no-self-use
+        # First, we need to materialize the workflow
+        nextflow_repo_uri = self.configuration.get('nextflow_repo_uri')
+        nextflow_repo_tag = self.configuration.get('nextflow_repo_tag')
+        
+        if (nextflow_repo_uri is None) or (nextflow_repo_tag is None):
+            logger.fatal("FATAL ERROR: both 'nextflow_repo_uri' and 'nextflow_repo_tag' parameters must be defined")
+            return False
+        
+        # Checking out the repo to be used
+        try:
+            repo_dir = self.doMaterializeRepo(nextflow_repo_uri,nextflow_repo_tag)
+        except Exception as error:
+            logger.fatal(str(error))
+            return False
+        
+        event_id = self.configuration['event_id']
+        participant_id = self.configuration['participant_id']
+        
+        inputDir = os.path.dirname(input_loc)
+        inputBasename = os.path.basename(input_loc)
         
         # Value needed to compose the Nextflow docker call
         uid = str(os.getuid())
@@ -119,57 +176,92 @@ class VRE_NF_RUNNER(Tool):
         homedir = os.path.expanduser("~")
         nxf_assets_dir = os.path.join(homedir,".nextflow","assets")
         if not os.path.exists(nxf_assets_dir):
-            os.makedirs(nxf_assets_dir)
+            try:
+                os.makedirs(nxf_assets_dir)
+            except Exception as error:
+                logger.fatal("ERROR: Unable to create nextflow assets directory. Error: "+str(error))
+                return False
         
         retval_stage = 'validation'
-        validation_params = [
+        
+        # The fixed parameters
+        validation_cmd_pre_vol = [
             "docker", "run", "--rm", "--net", "host",
             "-e", "USER",
             "-e", "HOME="+homedir,
-            "-e", "NXF_ASSETS=$NXF_ASSETS",
+            "-e", "NXF_ASSETS="+nxf_assets_dir,
             "-e", "NXF_USRMAP="+uid,
             "-e", "NXF_DOCKER_OPTS=-u "+uid+" -e HOME="+homedir,
-            "-v", "/var/run/docker.sock:/var/run/docker.sock",
-            "-v", homedir+":"+homedir+":ro,Z",
-            "-v", nxf_assets_dir+":"+nxf_assets_dir+":Z",
-            "-v", workdir+":"+workdir+":Z",
+            "-v", "/var/run/docker.sock:/var/run/docker.sock"
+        ]
+        
+        validation_cmd_post_vol = [
             "-w", workdir,
             self.nxf_image+":"+self.nxf_version,
-            "nextflow", "${args[@]}", "-with-docker"
+            "nextflow", "run", repo_dir, "-profile", "docker"
         ]
+        
+        # This one will be filled in by the volume parameters passed to docker
+        #docker_vol_params = []
+        
+        # This one will be filled in by the volume meta declarations, used
+        # to generate the volume parameters
+        volumes = [
+            (homedir,"ro,Z"),
+            (nxf_assets_dir,"Z"),
+            (workdir,"Z"),
+            (repo_dir,"ro,Z")
+        ]
+        
+        # These are the parameters, including input and output files and directories
+        variable_params = [
+            ('event_id',event_id),
+            ('participant_id',participant_id)
+        ]
+        
+        variable_infile_params = [
+            ('input',input_loc),
+            ('goldstandard_dir',goldstandard_dir_loc),
+            ('public_ref_dir',public_ref_dir_loc),
+            ('assess_dir',assess_dir_loc)
+        ]
+        
+        variable_outfile_params = [
+            ('statsdir',tmp_statsdir),
+            ('outdir',tmp_outdir),
+            ('otherdir',tmp_otherdir)
+        ]
+        
+        # Preparing the RO volumes
+        for ro_loc_id,ro_loc_val in variable_infile_params:
+            volumes.append((ro_loc_val,"ro,Z"))
+            variable_params.append((ro_loc_id,ro_loc_val))
+        
+        # Preparing the RW volumes
+        for rw_loc_id,rw_loc_val in variable_outfile_params:
+            volumes.append((rw_loc_val,"Z"))
+            variable_params.append((rw_loc_id,rw_loc_val))
+        
+        # Assembling the command line    
+        validation_params = []
+        validation_params.extend(validation_cmd_pre_vol)
+        
+        for volume_dir,volume_mode in volumes:
+            validation_params.append("-v")
+            validation_params.append(volume_dir+':'+volume_dir+':'+volume_mode)
+        
+        validation_params.extend(validation_cmd_post_vol)
+        
+        # Last, but not the least important
+        for param_id,param_val in variable_params:
+            validation_params.append("--" + param_id)
+            validation_params.append(param_val)
         
         #print("DEBUG: "+'  '.join(validation_params),file=sys.stderr)
         retval = subprocess.call(validation_params)
         
         resultsDir = None
         resultsTarDir = None
-        if retval == 0:
-                retval_stage = 'metrics'
-                resultsDir = tempfile.mkdtemp()
-                resultsTarDir = tempfile.mkdtemp()
-                metrics_params = [
-                        "docker","run","--rm","-u", uid,
-                        '-v',inputDir + ":/app/input:ro",
-                        '-v',metrics_ref_dir_loc+":/app/metrics:ro",
-                        '-v',resultsDir+":/app/results:rw",
-                        "tcga_metrics:" + tag,
-                        '-i',"/app/input/"+inputBasename,'-m','/app/metrics/','-p',participant_id,'-o','/app/results/',
-                        '-c'
-                ]
-                metrics_params.extend(cancer_types)
-                
-                retval = subprocess.call(metrics_params)
-                if retval == 0:
-                        retval_stage = 'assessment'
-                        retval = subprocess.call([
-                                "docker","run","--rm","-u", uid,
-                                '-v',assess_dir_loc+":/app/assess:ro",
-                                '-v',resultsDir+":/app/results:rw",
-                                '-v',resultsTarDir+":/app/resultsTar:rw",
-                                "tcga_assessment:" + tag,
-                                '-b',"/app/assess/",'-p','/app/results/','-o','/app/resultsTar/'
-                        ])
-        
         try:
                 if retval == 0:
                         # Create the MuG/VRE metrics file
@@ -197,10 +289,9 @@ class VRE_NF_RUNNER(Tool):
                 return False
         finally:
                 # Cleaning up in any case
-                if resultsDir is not None:
-                        shutil.rmtree(resultsDir)
-                if resultsTarDir is not None:
-                        shutil.rmtree(resultsTarDir)
+                for resDir in (tmp_statsdir,tmp_outdir,tmp_otherdir):
+                    if resDir is not None:
+                            shutil.rmtree(resDir)
 
         return True
 
@@ -240,12 +331,13 @@ class VRE_NF_RUNNER(Tool):
         output_files['tar_view'] = tar_view_path
         
         results = self.validate_and_assess(
-            os.path.abspath(input_files["genes"]),
-            os.path.abspath(input_files['metrics_ref_datasets']),
-            os.path.abspath(input_files['assessment_datasets']),
-            os.path.abspath(input_files['public_ref']),
-            metrics_path,
-            tar_view_path
+            os.path.abspath(input_files["input"]),
+            os.path.abspath(input_files['goldstandard_dir']),
+            os.path.abspath(input_files['assess_dir']),
+            os.path.abspath(input_files['public_ref_dir']),
+            results_path,
+            stats_path,
+            other_path
         )
         results = compss_wait_on(results)
 
@@ -263,7 +355,7 @@ class VRE_NF_RUNNER(Tool):
                 file_type="TXT",
                 file_path=metrics_path,
                 # Reference and golden data set paths should also be here
-                sources=[input_metadata["genes"].file_path],
+                sources=[input_metadata["input"].file_path],
                 meta_data={
                     "tool": "VRE_NF_RUNNER"
                 }

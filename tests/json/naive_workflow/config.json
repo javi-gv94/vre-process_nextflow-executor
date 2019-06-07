@@ -1,7 +1,7 @@
 {
     "input_files": [
         {
-            "name": "genes",
+            "name": "input",
             "value": "genes_dummy",
             "required": true,
             "allow_multiple": false
@@ -39,10 +39,12 @@
             "value": "Paco"
         },
         {
-            "name": "cancer_type",
-            "value": [
-                "ALL"
-            ]
+            "name": "nextflow_repo_uri",
+            "value": "https://github.com/nextflow-io/hello.git"
+        },
+        {
+            "name": "nextflow_repo_tag",
+            "value": "master"
         }
     ],
     "output_files": [
