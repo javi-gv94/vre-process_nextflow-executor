@@ -168,8 +168,8 @@ class WF_RUNNER(Tool):
         
         return repo_tag_destdir
 
-    @task(returns=bool, input_loc=FILE_IN, goldstandard_dir_loc=FILE_IN, assess_dir_loc=FILE_IN, public_ref_dir_loc=FILE_IN, results_loc=FILE_OUT, stats_loc=FILE_OUT, other_loc=FILE_OUT, isModifier=False)
-    def validate_and_assess(self, input_loc, goldstandard_dir_loc, assess_dir_loc, public_ref_dir_loc, results_loc, stats_loc, other_loc):  # pylint: disable=no-self-use
+    @task(returns=bool, input_loc=FILE_IN, goldstandard_dir_loc=FILE_IN, assess_dir_loc=FILE_IN, public_ref_dir_loc=FILE_IN, results_loc=FILE_OUT, stats_loc=FILE_OUT, other_loc=FILE_OUT, configuration=FILE_IN, isModifier=False)
+    def validate_and_assess(self, input_loc, goldstandard_dir_loc, assess_dir_loc, public_ref_dir_loc, results_loc, stats_loc, other_loc, configuration):  # pylint: disable=no-self-use
         # First, we need to materialize the workflow
         nextflow_repo_uri = self.configuration.get('nextflow_repo_uri')
         nextflow_repo_tag = self.configuration.get('nextflow_repo_tag')
@@ -208,10 +208,6 @@ class WF_RUNNER(Tool):
                 return False
         
         retval_stage = 'validation'
-        
-        tmp_statsdir = tempfile.mkdtemp()
-        tmp_outdir = tempfile.mkdtemp()
-        tmp_otherdir = tempfile.mkdtemp()
         
         # The fixed parameters
         validation_cmd_pre_vol = [
@@ -256,9 +252,9 @@ class WF_RUNNER(Tool):
         ]
         
         variable_outfile_params = [
-            ('statsdir',tmp_statsdir),
-            ('outdir',tmp_outdir),
-            ('otherdir',tmp_otherdir)
+            ('statsdir',stats_loc),
+            ('outdir',results_loc),
+            ('otherdir',other_loc)
         ]
         
         # Preparing the RO volumes
@@ -316,12 +312,7 @@ class WF_RUNNER(Tool):
         except IOError as error:
                 logger.fatal("I/O error({0}): {1}".format(error.errno, error.strerror))
                 return False
-        finally:
-                # Cleaning up in any case
-                for resDir in (tmp_statsdir,tmp_outdir,tmp_otherdir):
-                    if resDir is not None:
-                            shutil.rmtree(resDir)
-
+        
         return True
 
     def run(self, input_files, input_metadata, output_files):
@@ -349,15 +340,35 @@ class WF_RUNNER(Tool):
         
         metrics_path = output_files.get("metrics")
         if metrics_path is None:
-                metrics_path = os.path.join(project_path,participant_id+'.json')
+            metrics_path = os.path.join(project_path,participant_id+'.json')
         metrics_path = os.path.abspath(metrics_path)
         output_files['metrics'] = metrics_path
         
         tar_view_path = output_files.get("tar_view")
         if tar_view_path is None:
-                tar_view_path = os.path.join(project_path,participant_id+'.tar.gz')
+            tar_view_path = os.path.join(project_path,participant_id+'.tar.gz')
         tar_view_path = os.path.abspath(tar_view_path)
         output_files['tar_view'] = tar_view_path
+        
+        tar_nf_stats_path = output_files.get("tar_nf_stats")
+        if tar_nf_stats_path is None:
+            tar_nf_stats_path = os.path.join(project_path,'nfstats.tar.gz')
+        tar_nf_stats_path = os.path.abspath(tar_nf_stats_path)
+        output_files['tar_nf_stats'] = tar_nf_stats_path
+        
+        tar_other_path = output_files.get("tar_other")
+        if tar_other_path is None:
+            tar_other_path = os.path.join(project_path,'other_files.tar.gz')
+        tar_other_path = os.path.abspath(tar_other_path)
+        output_files['tar_other'] = tar_other_path
+        
+        # Creating the output directories
+        results_path = os.path.join(project_path,'results')
+        os.makedirs(results_path)
+        stats_path = os.path.join(project_path,'nf_stats')
+        os.makedirs(stats_path)
+        other_path = os.path.join(project_path,'other_files')
+        os.makedirs(other_path)
         
         results = self.validate_and_assess(
             os.path.abspath(input_files["input"]),
@@ -366,7 +377,8 @@ class WF_RUNNER(Tool):
             os.path.abspath(input_files['public_ref_dir']),
             results_path,
             stats_path,
-            other_path
+            other_path,
+            self.configuration
         )
         results = compss_wait_on(results)
 
@@ -401,6 +413,30 @@ class WF_RUNNER(Tool):
                     "tool": "VRE_NF_RUNNER"
                 }
             ),
+            "tar_nf_stats": Metadata(
+                # These ones are already known by the platform
+                # so comment them by now
+                data_type="tool_statistics",
+                file_type="TAR",
+                file_path=tar_nf_stats_path,
+                # Reference and golden data set paths should also be here
+                sources=[metrics_path],
+                meta_data={
+                    "tool": "VRE_NF_RUNNER"
+                }
+            ),
+            "tar_other": Metadata(
+                # These ones are already known by the platform
+                # so comment them by now
+                data_type="tool_statistics",
+                file_type="TAR",
+                file_path=tar_other_path,
+                # Reference and golden data set paths should also be here
+                sources=[metrics_path],
+                meta_data={
+                    "tool": "VRE_NF_RUNNER"
+                }
+            )
         }
 
         return (output_files, output_metadata)
