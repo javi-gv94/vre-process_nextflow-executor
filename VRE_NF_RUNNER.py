@@ -107,7 +107,7 @@ def main_json(config, in_metadata, out_metadata):
     
     if in_fixed:
         with open(in_metadata,"w") as in_met:
-            json.dump(in_metaArr,in_met)ç
+            json.dump(in_metaArr,in_met)
     
     result = app.launch(process_WF_RUNNER,
                         config,
