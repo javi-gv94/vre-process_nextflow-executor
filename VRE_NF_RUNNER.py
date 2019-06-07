@@ -99,7 +99,7 @@ def main_json(config, in_metadata, out_metadata):
     
     # Fixing possible problems in the input metadata
     with open(in_metadata,"r") as in_metF:
-        in_metaArr = json.load(in_metF)ç
+        in_metaArr = json.load(in_metF)
     
     in_fixed = False
     for in_m in in_metaArr:
