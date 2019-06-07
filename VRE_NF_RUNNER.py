@@ -28,6 +28,8 @@ from utils import logger
 
 from tool.VRE_NF import WF_RUNNER
 
+import json
+
 # ------------------------------------------------------------------------------
 
 class process_WF_RUNNER(Workflow):
@@ -94,6 +96,19 @@ def main_json(config, in_metadata, out_metadata):
     logger.info("1. Instantiate and launch the App")
     from apps.jsonapp import JSONApp
     app = JSONApp()
+    
+    # Fixing possible problems in the input metadata
+    with open(in_metadata,"r") as in_met:
+        in_metaArr = json.load()
+        in_fixed = False
+        for in_m in in_metaArr:
+            if in_m.get('taxon_id',0)  == 0:
+                in_m['taxon_id'] = -1
+    
+    if in_fixed:
+        with open(in_metadata,"w") as in_met:
+            json.dump(in_metaArr,in_met)ç
+    
     result = app.launch(process_WF_RUNNER,
                         config,
                         in_metadata,
