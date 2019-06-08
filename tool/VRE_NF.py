@@ -102,7 +102,7 @@ class WF_RUNNER(Tool):
                     with open(checkimage_stderr.name,"r") as c_stF:
                         checkimage_stderr_v = c_stF.read()
                     
-                    errstr = "ERROR: VRE Nextflow Runner failed while checking Nextflow image. Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(docker_tag,checkimage_stdout_v,checkimage_stderr_v)
+                    errstr = "ERROR: VRE Nextflow Runner failed while checking Nextflow image (retval {}). Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(retval,docker_tag,checkimage_stdout_v,checkimage_stderr_v)
                     logger.fatal(errstr)
                     raise Exception(errstr)
             
@@ -125,7 +125,7 @@ class WF_RUNNER(Tool):
                             pullimage_stderr_v = c_stF.read()
                         
                         # It failed!
-                        errstr = "ERROR: VRE Nextflow Runner failed while pulling Nextflow image. Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(docker_tag,pullimage_stdout_v,pullimage_stderr_v)
+                        errstr = "ERROR: VRE Nextflow Runner failed while pulling Nextflow image (retval {}). Tag: {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(retval,docker_tag,pullimage_stdout_v,pullimage_stderr_v)
                         logger.fatal(errstr)
                         raise Exception(errstr)
         
@@ -184,7 +184,7 @@ class WF_RUNNER(Tool):
                         with open(git_stderr.name,"r") as c_stF:
                             git_stderr_v = c_stF.read()
                         
-                        errstr = "ERROR: VRE Nextflow Runner could not pull '{}' (tag '{}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,git_stdout_v,git_stderr_v)
+                        errstr = "ERROR: VRE Nextflow Runner could not pull '{}' (tag '{}'). Retval {}\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,retval,git_stdout_v,git_stderr_v)
                         raise Exception(errstr)
         
         return repo_tag_destdir
@@ -332,7 +332,7 @@ class WF_RUNNER(Tool):
         retval = subprocess.call(validation_params)
         
         if retval != 0:
-            logger.fatal("ERROR: VRE NF evaluation failed. Exit value: "+retval)
+            logger.fatal("ERROR: VRE NF evaluation failed. Exit value: "+str(retval))
         
         return retval == 0
 
