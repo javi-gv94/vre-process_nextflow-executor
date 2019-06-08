@@ -388,10 +388,10 @@ class WF_RUNNER(Tool):
         stats_path = os.path.join(project_path,'nf_stats')
         other_path = os.path.join(project_path,'other_files')
         
-        # The directories are being created by the workflow manager
-        #os.makedirs(results_path)
+        # The directories are being created for the workflow manager, so they have the right owner
+        os.makedirs(results_path)
         os.makedirs(stats_path)
-        #os.makedirs(other_path)
+        os.makedirs(other_path)
         
         results = self.validate_and_assess(
             os.path.abspath(input_files["input"]),
