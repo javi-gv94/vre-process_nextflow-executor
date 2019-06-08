@@ -152,7 +152,7 @@ class WF_RUNNER(Tool):
         if not os.path.exists(repo_tag_destdir):
             # Try checking out the repository
             gitclone_params = [
-                self.git_cmd,'clone','-b',git_tag,'--recurse-subdirs',git_uri,repo_tag_destdir
+                self.git_cmd,'clone','-b',git_tag,'--recurse-submodules',git_uri,repo_tag_destdir
             ]
             
             with tempfile.NamedTemporaryFile() as gitclone_stdout:
