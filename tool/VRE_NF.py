@@ -188,6 +188,25 @@ class WF_RUNNER(Tool):
                         raise Exception(errstr)
         
         return repo_tag_destdir
+    
+    def packDir(self, resultsDir, destTarFile):
+        # This is only needed when a manifest must be generated
+        
+        #for metrics_file in os.listdir(resultsDir):
+        #        abs_metrics_file = os.path.join(resultsDir, metrics_file)
+        #        if fnmatch.fnmatch(metrics_file,"*.json") and os.path.isfile(abs_metrics_file):
+        #                with io.open(abs_metrics_file,mode='r',encoding="utf-8") as f:
+        #                        metrics = json.load(f)
+        #                        metricsArray.append(metrics)
+        #
+        #with io.open(metrics_loc, mode='w', encoding="utf-8") as f:
+        #        jdata = json.dumps(metricsArray, sort_keys=True, indent=4, separators=(',', ': '))
+        #        f.write(unicode(jdata,"utf-8"))
+        
+        # And create the MuG/VRE tar file
+        with tarfile.open(destTarFile,mode='w:gz',bufsize=1024*1024) as tar:
+                tar.add(resultsDir,arcname='data',recursive=True)
+        
 
     @task(returns=bool, input_loc=FILE_IN, goldstandard_dir_loc=FILE_IN, assess_dir_loc=FILE_IN, public_ref_dir_loc=FILE_IN, results_loc=FILE_OUT, stats_loc=FILE_OUT, other_loc=FILE_OUT, isModifier=False)
     def validate_and_assess(self, input_loc, goldstandard_dir_loc, assess_dir_loc, public_ref_dir_loc, results_loc, stats_loc, other_loc):  # pylint: disable=no-self-use
@@ -312,35 +331,10 @@ class WF_RUNNER(Tool):
         #print("DEBUG: "+'  '.join(validation_params),file=sys.stderr)
         retval = subprocess.call(validation_params)
         
-        resultsDir = None
-        resultsTarDir = None
-        try:
-                if retval == 0:
-                        # Create the MuG/VRE metrics file
-                        metricsArray = []
-                        for metrics_file in os.listdir(resultsDir):
-                                abs_metrics_file = os.path.join(resultsDir, metrics_file)
-                                if fnmatch.fnmatch(metrics_file,"*.json") and os.path.isfile(abs_metrics_file):
-                                        with io.open(abs_metrics_file,mode='r',encoding="utf-8") as f:
-                                                metrics = json.load(f)
-                                                metricsArray.append(metrics)
-                        
-                        with io.open(metrics_loc, mode='w', encoding="utf-8") as f:
-                                jdata = json.dumps(metricsArray, sort_keys=True, indent=4, separators=(',', ': '))
-                                f.write(unicode(jdata,"utf-8"))
-                        
-                        # And create the MuG/VRE tar file
-                        with tarfile.open(tar_view_loc,mode='w:gz',bufsize=1024*1024) as tar:
-                                tar.add(resultsTarDir,arcname='data',recursive=True)
-                else:
-                        logger.fatal("ERROR: TCGA CD evaluation failed, in step "+retval_stage)
-                        raise Exception("ERROR: TCGA CD evaluation failed, in step "+retval_stage)
-                        return False
-        except IOError as error:
-                logger.fatal("I/O error({0}): {1}".format(error.errno, error.strerror))
-                return False
+        if retval != 0:
+            logger.fatal("ERROR: VRE NF evaluation failed. Exit value: "+retval)
         
-        return True
+        return retval == 0
 
     def run(self, input_files, input_metadata, output_files):
         """
@@ -389,13 +383,15 @@ class WF_RUNNER(Tool):
         tar_other_path = os.path.abspath(tar_other_path)
         output_files['tar_other'] = tar_other_path
         
-        # Creating the output directories
+        # Defining the output directories
         results_path = os.path.join(project_path,'results')
-        os.makedirs(results_path)
         stats_path = os.path.join(project_path,'nf_stats')
-        os.makedirs(stats_path)
         other_path = os.path.join(project_path,'other_files')
-        os.makedirs(other_path)
+        
+        # The directories are being created by the workflow manager
+        #os.makedirs(results_path)
+        #os.makedirs(stats_path)
+        #os.makedirs(other_path)
         
         results = self.validate_and_assess(
             os.path.abspath(input_files["input"]),
@@ -407,11 +403,19 @@ class WF_RUNNER(Tool):
             other_path
         )
         results = compss_wait_on(results)
-
+        
         if results is False:
             logger.fatal("VRE NF RUNNER pipeline failed. See logs")
             raise Exception("VRE NF RUNNER pipeline failed. See logs")
             return {}, {}
+        
+        # Preparing the tar files
+        if os.path.exists(results_path):
+            self.packDir(results_path,tar_view_path)
+        if os.path.exists(stats_path):
+            self.packDir(stats_path,tar_nf_stats_path)
+        if os.path.exists(other_path):
+            self.packDir(other_path,tar_other_path)
         
         # BEWARE: Order DOES MATTER when there is a dependency from one output on another
         output_metadata = {
