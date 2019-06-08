@@ -359,12 +359,12 @@ class WF_RUNNER(Tool):
         project_path = self.configuration.get('project','.')
         participant_id = self.configuration['participant_id']
         
-        #metrics_path = output_files.get("metrics")
-        #if metrics_path is None:
-        #    metrics_path = os.path.join(project_path,participant_id+'.json')
-        #metrics_path = os.path.abspath(metrics_path)
-        #output_files['metrics'] = metrics_path
-        #
+        metrics_path = output_files.get("metrics")
+        if metrics_path is None:
+            metrics_path = os.path.join(project_path,participant_id+'.json')
+        metrics_path = os.path.abspath(metrics_path)
+        output_files['metrics'] = metrics_path
+        
         tar_view_path = output_files.get("tar_view")
         if tar_view_path is None:
             tar_view_path = os.path.join(project_path,participant_id+'.tar.gz')
@@ -412,6 +412,13 @@ class WF_RUNNER(Tool):
         # Preparing the tar files
         if os.path.exists(results_path):
             self.packDir(results_path,tar_view_path)
+            # Redoing metrics path
+            for metrics_file in os.listdir(results_path):
+                if metrics_file.startswith(participant_id) and metrics_file.endswith(".json"):
+                    metrics_path = os.path.join(results_path,metrics_file)
+                    output_files['metrics'] = metrics_path
+                    break
+
         if os.path.exists(stats_path):
             self.packDir(stats_path,tar_nf_stats_path)
         if os.path.exists(other_path):
@@ -419,18 +426,18 @@ class WF_RUNNER(Tool):
         
         # BEWARE: Order DOES MATTER when there is a dependency from one output on another
         output_metadata = {
-            #"metrics": Metadata(
-            #    # These ones are already known by the platform
-            #    # so comment them by now
-            #    data_type="metrics",
-            #    file_type="TXT",
-            #    file_path=metrics_path,
-            #    # Reference and golden data set paths should also be here
-            #    sources=[input_metadata["input"].file_path],
-            #    meta_data={
-            #        "tool": "VRE_NF_RUNNER"
-            #    }
-            #),
+            "metrics": Metadata(
+                # These ones are already known by the platform
+                # so comment them by now
+                data_type="metrics",
+                file_type="TXT",
+                file_path=metrics_path,
+                # Reference and golden data set paths should also be here
+                sources=[input_metadata["input"].file_path],
+                meta_data={
+                    "tool": "VRE_NF_RUNNER"
+                }
+            ),
             "tar_view": Metadata(
                 # These ones are already known by the platform
                 # so comment them by now
