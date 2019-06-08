@@ -150,22 +150,41 @@ class WF_RUNNER(Tool):
         repo_tag_destdir = os.path.join(repo_destdir,repo_hashed_tag_id)
         # We are assuming that, if the directory does exist, it contains the repo
         if not os.path.exists(repo_tag_destdir):
-            # Try checking out the repository
+            # Try cloing the repository without initial checkout
             gitclone_params = [
-                self.git_cmd,'clone','-b',git_tag,'--recurse-submodules',git_uri,repo_tag_destdir
+                self.git_cmd,'clone','-n','--recurse-submodules',git_uri,repo_tag_destdir
             ]
             
-            with tempfile.NamedTemporaryFile() as gitclone_stdout:
-                with tempfile.NamedTemporaryFile() as gitclone_stderr:
-                    retval = subprocess.call(gitclone_params,stdout=gitclone_stdout,stderr=gitclone_stderr)
+            # Now, checkout the specific commit
+            gitcheckout_params = [
+                self.git_cmd,'checkout',git_tag
+            ]
+            
+            # Last, initialize submodules
+            gitsubmodule_params = [
+                self.git_cmd,'submodule','update','--init'
+            ]
+            
+            with tempfile.NamedTemporaryFile() as git_stdout:
+                with tempfile.NamedTemporaryFile() as git_stderr:
+                    # First, bare clone
+                    retval = subprocess.call(gitclone_params,stdout=git_stdout,stderr=git_stderr)
+                    # Then, checkout
+                    if retval == 0:
+                        retval = subprocess.Popen(gitcheckout_params,stdout=git_stdout,stderr=git_stderr,cwd=repo_tag_destdir).wait()
+                    # Last, submodule preparation
+                    if retval == 0:
+                        retval = subprocess.Popen(gitsubmodule_params,stdout=git_stdout,stderr=git_stderr,cwd=repo_tag_destdir).wait()
+                    
+                    # Proper error handling
                     if retval != 0:
                         # Reading the output and error for the report
-                        with open(gitclone_stdout.name,"r") as c_stF:
-                            gitclone_stdout_v = c_stF.read()
-                        with open(gitclone_stderr.name,"r") as c_stF:
-                            gitclone_stderr_v = c_stF.read()
+                        with open(git_stdout.name,"r") as c_stF:
+                            git_stdout_v = c_stF.read()
+                        with open(git_stderr.name,"r") as c_stF:
+                            git_stderr_v = c_stF.read()
                         
-                        errstr = "ERROR: VRE Nextflow Runner could not pull '{}' (tag '{}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,gitclone_stdout_v,gitclone_stderr_v)
+                        errstr = "ERROR: VRE Nextflow Runner could not pull '{}' (tag '{}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,git_stdout_v,git_stderr_v)
                         raise Exception(errstr)
         
         return repo_tag_destdir
