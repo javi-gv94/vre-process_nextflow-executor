@@ -252,7 +252,6 @@ class WF_RUNNER(Tool):
         # The fixed parameters
         validation_cmd_pre_vol = [
             "docker", "run", "--rm", "--net", "host",
-            "-u",uid,
             "-e", "USER",
             "-e", "HOME="+homedir,
             "-e", "NXF_ASSETS="+nxf_assets_dir,
@@ -391,7 +390,7 @@ class WF_RUNNER(Tool):
         
         # The directories are being created by the workflow manager
         #os.makedirs(results_path)
-        #os.makedirs(stats_path)
+        os.makedirs(stats_path)
         #os.makedirs(other_path)
         
         results = self.validate_and_assess(
