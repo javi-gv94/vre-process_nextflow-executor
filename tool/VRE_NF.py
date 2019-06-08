@@ -165,7 +165,7 @@ class WF_RUNNER(Tool):
                         with open(gitclone_stderr.name,"r") as c_stF:
                             gitclone_stderr_v = c_stF.read()
                         
-                        errstr = "ERROR: VRE Nextflow Runner could not pull '{0}' (tag '{1}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,gitclone_stdout_v,gitclone_stderr_v)
+                        errstr = "ERROR: VRE Nextflow Runner could not pull '{}' (tag '{}')\n======\nSTDOUT\n======\n{}\n======\nSTDERR\n======\n{}".format(git_uri,git_tag,gitclone_stdout_v,gitclone_stderr_v)
                         raise Exception(errstr)
         
         return repo_tag_destdir
@@ -184,7 +184,7 @@ class WF_RUNNER(Tool):
         try:
             repo_dir = self.doMaterializeRepo(nextflow_repo_uri,nextflow_repo_tag)
         except Exception as error:
-            logger.fatal(str(error))
+            logger.fatal("While materializing repo: "+type(error).__name__ + ': '+str(error))
             return False
         
         event_id = self.configuration['event_id']
