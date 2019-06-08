@@ -252,6 +252,7 @@ class WF_RUNNER(Tool):
         # The fixed parameters
         validation_cmd_pre_vol = [
             "docker", "run", "--rm", "--net", "host",
+            "-u",uid,
             "-e", "USER",
             "-e", "HOME="+homedir,
             "-e", "NXF_ASSETS="+nxf_assets_dir,
@@ -328,7 +329,7 @@ class WF_RUNNER(Tool):
             validation_params.append("--" + param_id)
             validation_params.append(param_val)
         
-        #print("DEBUG: "+'  '.join(validation_params),file=sys.stderr)
+        logger.debug(' '.join(validation_params))
         retval = subprocess.call(validation_params)
         
         if retval != 0:
