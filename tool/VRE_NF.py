@@ -409,16 +409,36 @@ class WF_RUNNER(Tool):
             raise Exception("VRE NF RUNNER pipeline failed. See logs")
             return {}, {}
         
+        images_metadata = dict()
         # Preparing the tar files
         if os.path.exists(results_path):
             self.packDir(results_path,tar_view_path)
             # Redoing metrics path
             for metrics_file in os.listdir(results_path):
                 if metrics_file.startswith(participant_id) and metrics_file.endswith(".json"):
-                    metrics_path = os.path.join(results_path,metrics_file)
-                    output_files['metrics'] = metrics_path
-                    break
-
+                    orig_metrics_path = os.path.join(results_path,metrics_file)
+                    shutil.copyfile(orig_metrics_path,metrics_path)
+                elif metrics_file.endswith(".svg") or metrics_file.endswith(".png") or metrics_file.endswith(".jpg"):
+                    orig_file_path = os.path.join(results_path,metrics_file)
+                    new_file_path = os.path.join(project_path,metrics_file)
+                    shutil.copyfile(orig_file_path,new_file_path)
+                    
+                    theFileType = metrics_file[metrics_file.rindex(".")+1:].upper()
+                    images_metadata[metrics_file] = Metadata(
+                        # These ones are already known by the platform
+                        # so comment them by now
+                        data_type="metrics",
+                        file_type=theFileType,
+                        file_path=new_file_path,
+                        # Reference and golden data set paths should also be here
+                        sources=[input_metadata["input"].file_path],
+                        meta_data={
+                            "tool": "VRE_NF_RUNNER"
+                        }
+                    )
+                    output_files[metrics_file] = new_file_path
+                    
+        # Preparing the expected outputs
         if os.path.exists(stats_path):
             self.packDir(stats_path,tar_nf_stats_path)
         if os.path.exists(other_path):
@@ -475,5 +495,8 @@ class WF_RUNNER(Tool):
                 }
             )
         }
+        
+        # Adding the additional interesting files
+        output_metadata.update(images_metadata)
 
         return (output_files, output_metadata)
