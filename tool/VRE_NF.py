@@ -417,8 +417,6 @@ class WF_RUNNER(Tool):
             raise Exception("VRE NF RUNNER pipeline failed. See logs")
             return {}, {}
         
-        images_metadata = dict()
-        images_file_paths = None
         # Preparing the tar files
         if os.path.exists(results_path):
             self.packDir(results_path,tar_view_path)
@@ -427,11 +425,23 @@ class WF_RUNNER(Tool):
                 if metrics_file.startswith(participant_id) and metrics_file.endswith(".json"):
                     orig_metrics_path = os.path.join(results_path,metrics_file)
                     shutil.copyfile(orig_metrics_path,metrics_path)
-                else:
-                    theFileType = metrics_file[metrics_file.rindex(".")+1:].lower()
+                    break
+        
+        # Preparing the expected outputs
+        if os.path.exists(stats_path):
+            self.packDir(stats_path,tar_nf_stats_path)
+        
+        images_metadata = dict()
+        images_file_paths = None
+        if os.path.exists(other_path):
+            self.packDir(other_path,tar_other_path)
+            # Searching for image-like files
+            for other_root, other_dirs, other_files in os.walk(other_path):
+                for other_file in other_files:
+                    theFileType = other_file[other_file.rindex(".")+1:].lower()
                     if theFileType in self.IMG_FILE_TYPES:
-                        orig_file_path = os.path.join(results_path,metrics_file)
-                        new_file_path = os.path.join(project_path,metrics_file)
+                        orig_file_path = os.path.join(other_root,other_file)
+                        new_file_path = os.path.join(project_path,other_file)
                         shutil.copyfile(orig_file_path,new_file_path)
                         
                         # Initializing, if it isn't
@@ -453,12 +463,6 @@ class WF_RUNNER(Tool):
                         
                         # Populating
                         images_file_paths.append(new_file_path)
-        
-        # Preparing the expected outputs
-        if os.path.exists(stats_path):
-            self.packDir(stats_path,tar_nf_stats_path)
-        if os.path.exists(other_path):
-            self.packDir(other_path,tar_other_path)
         
         # BEWARE: Order DOES MATTER when there is a dependency from one output on another
         output_metadata = {
