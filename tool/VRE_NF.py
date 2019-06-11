@@ -463,8 +463,8 @@ class WF_RUNNER(Tool):
             "metrics": Metadata(
                 # These ones are already known by the platform
                 # so comment them by now
-                #data_type="aggregation",
-                #file_type="JSON",
+                data_type="assessment",
+                file_type="JSON",
                 file_path=metrics_path,
                 # Reference and golden data set paths should also be here
                 sources=[input_metadata["input"].file_path],
