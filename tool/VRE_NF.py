@@ -64,7 +64,15 @@ class WF_RUNNER(Tool):
     DEFAULT_GIT_CMD='git'
     
     MASKED_KEYS = { 'execution', 'project', 'description', 'nextflow_repo_uri', 'nextflow_repo_tag' }
-
+    
+    IMG_FILE_TYPES = {
+        'png',
+        'svg',
+        'pdf',
+        'jpg',
+        'tif'
+    }
+    
     def __init__(self, configuration=None):
         """
         Init function
@@ -418,26 +426,31 @@ class WF_RUNNER(Tool):
                 if metrics_file.startswith(participant_id) and metrics_file.endswith(".json"):
                     orig_metrics_path = os.path.join(results_path,metrics_file)
                     shutil.copyfile(orig_metrics_path,metrics_path)
-                elif metrics_file.endswith(".svg") or metrics_file.endswith(".png") or metrics_file.endswith(".jpg"):
-                    orig_file_path = os.path.join(results_path,metrics_file)
-                    new_file_path = os.path.join(project_path,metrics_file)
-                    shutil.copyfile(orig_file_path,new_file_path)
-                    
-                    theFileType = metrics_file[metrics_file.rindex(".")+1:].upper()
-                    images_metadata[metrics_file] = Metadata(
-                        # These ones are already known by the platform
-                        # so comment them by now
-                        data_type="metrics",
-                        file_type=theFileType,
-                        file_path=new_file_path,
-                        # Reference and golden data set paths should also be here
-                        sources=[input_metadata["input"].file_path],
-                        meta_data={
-                            "tool": "VRE_NF_RUNNER"
-                        }
-                    )
-                    output_files[metrics_file] = new_file_path
-                    
+                else:
+                    theFileType = metrics_file[metrics_file.rindex(".")+1:].lower()
+                    if theFileType in self.IMG_FILE_TYPES:
+                        orig_file_path = os.path.join(results_path,metrics_file)
+                        
+                        # Initializing, if it isn't
+                        if 'report_images' not in images_metadata:
+                            images_metadata['report_images'] = []
+                            output_files['report_images'] = []
+                        
+                        # Populating
+                        images_metadata['report_images'].append(Metadata(
+                            # These ones are already known by the platform
+                            # so comment them by now
+                            data_type="report_image",
+                            file_type="IMG",
+                            file_path=orig_file_path,
+                            # Reference and golden data set paths should also be here
+                            sources=[input_metadata["input"].file_path],
+                            meta_data={
+                                "tool": "VRE_NF_RUNNER"
+                            }
+                        ))
+                        output_files['report_images'].append(orig_file_path)
+        
         # Preparing the expected outputs
         if os.path.exists(stats_path):
             self.packDir(stats_path,tar_nf_stats_path)
@@ -449,8 +462,8 @@ class WF_RUNNER(Tool):
             "metrics": Metadata(
                 # These ones are already known by the platform
                 # so comment them by now
-                data_type="metrics",
-                file_type="TXT",
+                #data_type="aggregation",
+                #file_type="JSON",
                 file_path=metrics_path,
                 # Reference and golden data set paths should also be here
                 sources=[input_metadata["input"].file_path],
