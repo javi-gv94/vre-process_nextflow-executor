@@ -418,6 +418,7 @@ class WF_RUNNER(Tool):
             return {}, {}
         
         images_metadata = dict()
+        images_file_paths = None
         # Preparing the tar files
         if os.path.exists(results_path):
             self.packDir(results_path,tar_view_path)
@@ -433,23 +434,23 @@ class WF_RUNNER(Tool):
                         
                         # Initializing, if it isn't
                         if 'report_images' not in images_metadata:
+                            images_file_paths = []
                             images_metadata['report_images'] = Metadata(
                                 # These ones are already known by the platform
                                 # so comment them by now
                                 data_type="report_image",
                                 file_type="IMG",
-                                file_path=[],
+                                file_path=images_file_paths,
                                 # Reference and golden data set paths should also be here
                                 sources=[input_metadata["input"].file_path],
                                 meta_data={
                                     "tool": "VRE_NF_RUNNER"
                                 }
                             )
-                            output_files['report_images'] = []
+                            output_files['report_images'] = images_file_paths
                         
                         # Populating
-                        images_metadata['report_images']['file_path'].append(orig_file_path)
-                        output_files['report_images'].append(orig_file_path)
+                        images_file_paths.append(orig_file_path)
         
         # Preparing the expected outputs
         if os.path.exists(stats_path):
