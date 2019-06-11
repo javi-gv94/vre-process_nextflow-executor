@@ -431,6 +431,8 @@ class WF_RUNNER(Tool):
                     theFileType = metrics_file[metrics_file.rindex(".")+1:].lower()
                     if theFileType in self.IMG_FILE_TYPES:
                         orig_file_path = os.path.join(results_path,metrics_file)
+                        new_file_path = os.path.join(project_path,metrics_file)
+                        shutil.copyfile(orig_file_path,new_file_path)
                         
                         # Initializing, if it isn't
                         if 'report_images' not in images_metadata:
@@ -450,7 +452,7 @@ class WF_RUNNER(Tool):
                             output_files['report_images'] = images_file_paths
                         
                         # Populating
-                        images_file_paths.append(orig_file_path)
+                        images_file_paths.append(new_file_path)
         
         # Preparing the expected outputs
         if os.path.exists(stats_path):
