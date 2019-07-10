@@ -1,0 +1,69 @@
+{
+    "output_files": [
+        {
+            "name": "metrics",
+            "data_type": "assessment",
+            "file_type": "JSON",
+            "sources": [
+                "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/uploads/test.tre"
+            ],
+            "meta_data": {
+                "tool": "VRE_NF_RUNNER"
+            },
+            "taxon_id": null,
+            "file_path": "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/run016/outbreak_predictor.json"
+        },
+        {
+            "name": "report_images",
+            "data_type": "report_image",
+            "file_type": "IMG",
+            "sources": [
+                "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/uploads/test.tre"
+            ],
+            "meta_data": {
+                "tool": "VRE_NF_RUNNER"
+            },
+            "taxon_id": null,
+            "file_path": "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/run016/benchmark_gmi_robinsonfoulds_heatmap.svg"
+        },
+        {
+            "name": "tar_view",
+            "data_type": "tool_statistics",
+            "file_type": "TAR",
+            "sources": [
+                "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/uploads/test.tre"
+            ],
+            "meta_data": {
+                "tool": "VRE_NF_RUNNER"
+            },
+            "taxon_id": null,
+            "file_path": "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/run016/outbreak_predictor.tar.gz"
+        },
+        {
+            "name": "tar_nf_stats",
+            "data_type": "tool_statistics",
+            "file_type": "TAR",
+            "sources": [
+                "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/uploads/test.tre"
+            ],
+            "meta_data": {
+                "tool": "VRE_NF_RUNNER"
+            },
+            "taxon_id": null,
+            "file_path": "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/run016/nfstats.tar.gz"
+        },
+        {
+            "name": "tar_other",
+            "data_type": "tool_statistics",
+            "file_type": "TAR",
+            "sources": [
+                "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/uploads/test.tre"
+            ],
+            "meta_data": {
+                "tool": "VRE_NF_RUNNER"
+            },
+            "taxon_id": null,
+            "file_path": "/gpfs/vre-dev/userdata/OpEBUSER5cc02033c429d/__PROJ5cc02033c42ac2.76881915/run016/other_files.tar.gz"
+        }
+    ]
+}

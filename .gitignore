@@ -11,3 +11,5 @@
 .cache
 /tests/data/tmp
 /tool.log
+/WF-checkouts/
+/*-test/
