@@ -243,7 +243,7 @@ class WF_RUNNER(Tool):
         uid = str(os.getuid())
         
         # Should workdir be in a separate place?
-        workdir = self.configuration['project']
+        workdir = os.path.abspath(self.configuration.get('project','.'))
         
         # Directories required by Nextflow in a Docker
         homedir = os.path.expanduser("~")
@@ -364,7 +364,7 @@ class WF_RUNNER(Tool):
         output_metadata : dict
             List of matching metadata for the returned files
         """
-        project_path = self.configuration.get('project','.')
+        project_path = os.path.abspath(self.configuration.get('project','.'))
         participant_id = self.configuration['participant_id']
         
         metrics_path = output_files.get("metrics")
