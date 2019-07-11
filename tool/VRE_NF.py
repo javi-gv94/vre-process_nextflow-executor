@@ -271,7 +271,7 @@ class WF_RUNNER(Tool):
         validation_cmd_post_vol = [
             "-w", workdir,
             self.nxf_image+":"+self.nxf_version,
-            "nextflow", "run", repo_dir, "-profile", "docker"
+            "nextflow", "run", repo_dir, "--with-docker"
         ]
         
         # This one will be filled in by the volume parameters passed to docker
@@ -367,11 +367,23 @@ class WF_RUNNER(Tool):
         project_path = os.path.abspath(self.configuration.get('project','.'))
         participant_id = self.configuration['participant_id']
         
+        validated_participant_path = output_files.get("validated_participant")
+        if validated_participant_path is None:
+            validated_participant_path = os.path.join(project_path,participant_id+'_participant.json')
+        validated_participant_path = os.path.abspath(validated_participant_path)
+        output_files['validated_participant'] = validated_participant_path
+
         metrics_path = output_files.get("metrics")
         if metrics_path is None:
-            metrics_path = os.path.join(project_path,participant_id+'.json')
+            metrics_path = os.path.join(project_path,participant_id+'_assessment.json')
         metrics_path = os.path.abspath(metrics_path)
         output_files['metrics'] = metrics_path
+
+        consolidated_path = output_files.get("consolidated")
+        if consolidated_path is None:
+            consolidated_path = os.path.join(project_path,participant_id+'_consolidated_result.json')
+        consolidated_path = os.path.abspath(consolidated_path)
+        output_files['consolidated'] = consolidated_path
         
         tar_view_path = output_files.get("tar_view")
         if tar_view_path is None:
@@ -466,6 +478,18 @@ class WF_RUNNER(Tool):
         
         # BEWARE: Order DOES MATTER when there is a dependency from one output on another
         output_metadata = {
+            "validated_participant": Metadata(
+                # These ones are already known by the platform
+                # so comment them by now
+                data_type="validated_participant",
+                file_type="JSON",
+                file_path=validated_participant_path,
+                # Reference and golden data set paths should also be here
+                sources=[input_metadata["input"].file_path],
+                meta_data={
+                    "tool": "VRE_NF_RUNNER"
+                }
+            ),
             "metrics": Metadata(
                 # These ones are already known by the platform
                 # so comment them by now
@@ -508,6 +532,18 @@ class WF_RUNNER(Tool):
                 data_type="tool_statistics",
                 file_type="TAR",
                 file_path=tar_other_path,
+                # Reference and golden data set paths should also be here
+                sources=[input_metadata["input"].file_path],
+                meta_data={
+                    "tool": "VRE_NF_RUNNER"
+                }
+            ),
+            "consolidated": Metadata(
+                # These ones are already known by the platform
+                # so comment them by now
+                data_type="consolidated_benchmark_dataset",
+                file_type="JSON",
+                file_path=consolidated_path,
                 # Reference and golden data set paths should also be here
                 sources=[input_metadata["input"].file_path],
                 meta_data={
