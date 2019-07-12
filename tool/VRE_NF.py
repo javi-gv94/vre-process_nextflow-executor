@@ -241,6 +241,7 @@ class WF_RUNNER(Tool):
         
         # Value needed to compose the Nextflow docker call
         uid = str(os.getuid())
+        gid = str(os.getgid())
         
         # Should workdir be in a separate place?
         workdir = os.path.abspath(self.configuration.get('project','.'))
@@ -264,7 +265,7 @@ class WF_RUNNER(Tool):
             "-e", "HOME="+homedir,
             "-e", "NXF_ASSETS="+nxf_assets_dir,
             "-e", "NXF_USRMAP="+uid,
-            "-e", "NXF_DOCKER_OPTS=-u "+uid+" -e HOME="+homedir,
+            "-e", "NXF_DOCKER_OPTS=-u "+uid+":"+gid+" -e HOME="+homedir,
             "-v", "/var/run/docker.sock:/var/run/docker.sock"
         ]
         
