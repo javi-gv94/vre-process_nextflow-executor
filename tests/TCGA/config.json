@@ -44,7 +44,7 @@
         },
         {
             "name": "nextflow_repo_tag",
-            "value": "9fccbb20804c6b364524555640698b5df4155141"
+            "value": "a4d38a72f929b9aea5c1cb791a14fa7e12864fa0"
         },
         {
             "name": "community_id",
@@ -67,6 +67,7 @@
             "file": {
                 "file_type": "JSON",
                 "data_type": "validated_participant",
+                "file_name": "TCGA-test/validation_result",
                 "compressed": "null",
                 "meta_data": {
                     "description": "Benchmarking data model minimal participant dataset",
@@ -96,6 +97,7 @@
             "allow_multiple": true,
             "file": {
                 "file_type": "JSON",
+                "file_name": "TCGA-test/consolidated_results",
                 "data_type": "consolidated_benchmark_dataset",
                 "compressed": "null",
                 "meta_data": {
