@@ -241,6 +241,7 @@ class WF_RUNNER(Tool):
         
         # Value needed to compose the Nextflow docker call
         uid = str(os.getuid())
+        gid = str(os.getgid())
         
         # Should workdir be in a separate place?
         workdir = os.path.abspath(self.configuration.get('project','.'))
@@ -264,7 +265,7 @@ class WF_RUNNER(Tool):
             "-e", "HOME="+homedir,
             "-e", "NXF_ASSETS="+nxf_assets_dir,
             "-e", "NXF_USRMAP="+uid,
-            "-e", "NXF_DOCKER_OPTS=-u "+uid+" -e HOME="+homedir,
+            "-e", "NXF_DOCKER_OPTS=-u "+uid+":"+gid+" -e HOME="+homedir,
             "-v", "/var/run/docker.sock:/var/run/docker.sock"
         ]
         
@@ -443,8 +444,24 @@ class WF_RUNNER(Tool):
         if os.path.exists(stats_path):
             self.packDir(stats_path,tar_nf_stats_path)
         
-        images_metadata = dict()
-        images_file_paths = None
+        # Initializing
+        images_file_paths = []
+        images_metadata = {
+            'report_images': Metadata(
+                # These ones are already known by the platform
+                # so comment them by now
+                data_type="report_image",
+                file_type="IMG",
+                file_path=images_file_paths,
+                # Reference and golden data set paths should also be here
+                sources=[input_metadata["input"].file_path],
+                meta_data={
+                    "tool": "VRE_NF_RUNNER"
+                }
+            )
+        }
+        output_files['report_images'] = images_file_paths
+        
         if os.path.exists(other_path):
             self.packDir(other_path,tar_other_path)
             # Searching for image-like files
@@ -455,23 +472,6 @@ class WF_RUNNER(Tool):
                         orig_file_path = os.path.join(other_root,other_file)
                         new_file_path = os.path.join(project_path,other_file)
                         shutil.copyfile(orig_file_path,new_file_path)
-                        
-                        # Initializing, if it isn't
-                        if 'report_images' not in images_metadata:
-                            images_file_paths = []
-                            images_metadata['report_images'] = Metadata(
-                                # These ones are already known by the platform
-                                # so comment them by now
-                                data_type="report_image",
-                                file_type="IMG",
-                                file_path=images_file_paths,
-                                # Reference and golden data set paths should also be here
-                                sources=[input_metadata["input"].file_path],
-                                meta_data={
-                                    "tool": "VRE_NF_RUNNER"
-                                }
-                            )
-                            output_files['report_images'] = images_file_paths
                         
                         # Populating
                         images_file_paths.append(new_file_path)
