@@ -67,7 +67,7 @@
             "file": {
                 "file_type": "JSON",
                 "data_type": "validated_participant",
-                "file_name": "TCGA-test/validation_result",
+                "file_name": "validated-participant-data.json",
                 "compressed": "null",
                 "meta_data": {
                     "description": "Benchmarking data model minimal participant dataset",
@@ -97,7 +97,7 @@
             "allow_multiple": true,
             "file": {
                 "file_type": "JSON",
-                "file_name": "TCGA-test/consolidated_results",
+                "file_name": "consolidated_results.json",
                 "data_type": "consolidated_benchmark_dataset",
                 "compressed": "null",
                 "meta_data": {
